@@ -28,11 +28,11 @@ logger.addHandler(ch)
 def worker(playlist, m3u8_uri):
     '''the thread worker function'''
     logger.debug("worker for playlist: %s" % m3u8_uri)
-    playlist_loop(playlist, m3u8_uri)
+    listen_segments(playlist, m3u8_uri)
     return
 
 def load_playlist(m3u8_uri):
-    ''' load m3u8 URI and extract playlists '''
+    '''load m3u8 URI and extract playlists '''
     logger.debug('Load playlist %s' % m3u8_uri)
     playlist = m3u8.load(m3u8_uri)
     if playlist.is_variant:
@@ -41,7 +41,7 @@ def load_playlist(m3u8_uri):
         return digest_singel_playlist(playlist, m3u8_uri)
 
 def digest_variant_playlist(playlist, m3u8_uri):
-    ''' extract single playlists from variant '''
+    '''extract single playlists from variant '''
     for p in playlist.playlists:
         load_playlist(p.absolute_uri)
 
@@ -53,24 +53,30 @@ def digest_singel_playlist(playlist, m3u8_uri):
     threads.append(t)
     t.start()
 
-def playlist_loop(playlist, m3u8_uri):
-    sequence = 0
-    while True:
-        if sequence == playlist.media_sequence:
-            duration = playlist.target_duration
-            logger.debug('sleeping for %s seconds' % duration)
-            sleep(duration)
-            playlist = m3u8.load(m3u8_uri)
-        else:
-            logger.info('sequence: %s' % sequence)
-            playlist = m3u8.load(m3u8_uri)
-            #poke_segment(playlist)
-            sequence = playlist.media_sequence
+def get_segments(m3u8_uri):
+    '''extract all segments from a playlist and return it as a set'''
+    segments = set()
+    playlist = m3u8.load(m3u8_uri)
+    segments = [segment.absolute_uri for segment in playlist.segments]
+    return segments
 
-def poke_segment(playlist):
-    ''' poke segments, if error return segment and error message '''
-    uris = [segment.absolute_uri for segment in playlist.segments]
-    logger.debug(uris)
+def sort_set(data):
+    '''Take a set as input, sort it alpha numeric and return the new set'''
+    return sorted(data, key=lambda item: (int(item.partition(' ')[0])
+                                    if item[0].isdigit() else float('inf'), item))
+
+def listen_segments(playlist, m3u8_uri):
+    old = set()
+    while True:
+        segments = set(get_segments(m3u8_uri))
+        new = segments - old
+        new = sort_set(new)
+        for segment in new:
+            logger.debug('Found new segment %s' % segment)
+        duration = playlist.target_duration
+        logger.debug('sleeping for %s seconds' % duration)
+        sleep(duration)
+        old = segments
 
 if __name__ == "__main__":
     threads = []
