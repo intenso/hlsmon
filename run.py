@@ -28,7 +28,8 @@ logger.addHandler(ch)
 def worker(playlist, m3u8_uri):
     '''the thread worker function'''
     logger.debug("worker for playlist: %s" % m3u8_uri)
-    listen_segments(playlist, m3u8_uri)
+    for segment in listen_segments(playlist, m3u8_uri):
+        logger.debug('Found new segment %s' % segment)
     return
 
 def load_playlist(m3u8_uri):
@@ -72,7 +73,7 @@ def listen_segments(playlist, m3u8_uri):
         new = segments - old
         new = sort_set(new)
         for segment in new:
-            logger.debug('Found new segment %s' % segment)
+            yield segment
         duration = playlist.target_duration
         logger.debug('sleeping for %s seconds' % duration)
         sleep(duration)
