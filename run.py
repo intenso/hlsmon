@@ -70,8 +70,7 @@ def listen_segments(playlist, m3u8_uri):
     old = set()
     while True:
         segments = set(get_segments(m3u8_uri))
-        new = segments - old
-        new = sort_set(new)
+        new = sort_set(segments - old)
         for segment in new:
             yield segment
         duration = playlist.target_duration
