@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import m3u8
+import requests
 import threading
 import logging
 from time import sleep
@@ -25,11 +26,22 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
+def get_http_response(uri):
+    '''return the HTTP response code for given URI'''
+    r = requests.head(uri)
+    if not r.status_code == 200:
+        logger.warning('Got response %s for %s' % (r.status_code, uri))
+        return r.status_code
+    else:
+        logger.debug('Got response code: %s' % r.status_code)
+        pass
+
 def worker(playlist, m3u8_uri):
     '''the thread worker function'''
     logger.debug("worker for playlist: %s" % m3u8_uri)
     for segment in listen_segments(playlist, m3u8_uri):
         logger.debug('Found new segment %s' % segment)
+        get_http_response(segment)
     return
 
 def load_playlist(m3u8_uri):
